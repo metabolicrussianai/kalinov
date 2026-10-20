@@ -196,6 +196,8 @@ Bugs that only a live host exposed, all fixed and covered by regression tests: r
 
 Cloud client, first against a local stand-in server: no key sends nothing; a block verdict reaches the agent as `EpistemicConflictError` with `source: cloud`; an unresponsive server costs the configured timeout and the write proceeds on the local decision; confident lines never reach the network; an email in the line arrives as `[email]`. Then against the hosted arbitrator: a live Gateway received a cloud block, and the call was metered on the server.
 
+Routing counters are also verified on a live Gateway (2026.10.5, `scripts/live-e2e/`): a local-only write and a blocked generalization produce the expected counters (`evaluated=2 local=1 blocked=1`), persisted in `.kalinov/state.json` across restarts, with one `kalinov: routing ...` log line per op. The live-traffic share itself is not measured by any harness here: it needs a host doing real work (see Routing stats above).
+
 ### Eval
 
 An author-labelled set of 168 EN/RU memory lines against active constraints. The tuning set (120 lines) was used to adjust routing and the judge; the held-out set (48 lines, 24 meanings in both languages) was not. Neither is an independent third-party labelling, and the sets are small: read the intervals, not the point estimates.
