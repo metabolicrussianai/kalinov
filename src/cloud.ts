@@ -74,7 +74,8 @@ export interface CloudClient {
   arbitrate(req: CloudRequest): Promise<CloudVerdict | null>;
 }
 
-export interface CloudDeps { logger?: { info(m: string): void }; env?: NodeJS.ProcessEnv; now?: () => number }
+export interface CloudDeps { logger?: { info(m: string): void }; env?: NodeJS.ProcessEnv; now?: () => number; /** Mutable counters the client bumps: network requests initiated, cache hits, fallbacks (no verdict). */
+  counts?: { network_requests: number; cache_hits: number; fallbacks: number } }
 
 const BREAKER_FAILS = 3;
 const BREAKER_MS = 60_000;
@@ -90,6 +91,7 @@ export function createCloudClient(cfg: CloudConfig | undefined, deps: CloudDeps 
   const timeoutMs = Math.min(5000, Math.max(100, cfg?.timeoutMs ?? DEFAULT_TIMEOUT_MS));
   const now = deps.now ?? Date.now;
   const log = (m: string) => deps.logger?.info(`kalinov-cloud: ${m}`);
+  const counts = deps.counts ?? { network_requests: 0, cache_hits: 0, fallbacks: 0 };
   const cache = new Map<string, { at: number; v: CloudVerdict }>();
   let fails = 0;
   let openUntil = 0;
@@ -98,7 +100,7 @@ export function createCloudClient(cfg: CloudConfig | undefined, deps: CloudDeps 
     enabled: true,
     async arbitrate(req) {
       const t = now();
-      if (t < openUntil) return null; // breaker open: do not add latency to every write while the service is down
+      if (t < openUntil) { counts.fallbacks++; return null; } // breaker open: do not add latency to every write while the service is down
 
       const body = JSON.stringify({
         ...req,
@@ -108,10 +110,11 @@ export function createCloudClient(cfg: CloudConfig | undefined, deps: CloudDeps 
       });
       const ck = createHash("sha256").update(body).digest("hex");
       const hit = cache.get(ck);
-      if (hit && t - hit.at < CACHE_MS) return hit.v;
+      if (hit && t - hit.at < CACHE_MS) { counts.cache_hits++; return hit.v; }
 
       const ctl = new AbortController();
       const timer = setTimeout(() => ctl.abort(), timeoutMs);
+      counts.network_requests++;
       try {
         const res = await globalThis.fetch(endpoint, {
           method: "POST",
@@ -128,6 +131,7 @@ export function createCloudClient(cfg: CloudConfig | undefined, deps: CloudDeps 
         return v;
       } catch (err) {
         const why = ctl.signal.aborted ? `timeout ${timeoutMs}ms` : String((err as Error)?.message ?? err);
+        counts.fallbacks++;
         if (++fails >= BREAKER_FAILS) { openUntil = t + BREAKER_MS; fails = 0; log(`unavailable (${why}); local decisions only for ${BREAKER_MS / 1000}s`); }
         else log(`skipped (${why}); using local decision`);
         return null;

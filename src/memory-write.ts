@@ -1,4 +1,5 @@
 import type { Constraint, TierMeta } from "./adapters/types.ts";
+import type { PlanObserve } from "./stats.ts";
 import { classify, buildMeta, UNCERTAIN_BELOW, type ClassifyResult } from "./classifier.ts";
 import { arbitrate, subjectOverlap, type EpistemicConflictError } from "./arbitration.ts";
 import { parseLine, stampLine, stripTag } from "./adapters/markdown.ts";
@@ -15,7 +16,7 @@ export interface GreyCase { line: string; result: ClassifyResult; related: Const
 /** A cloud verdict applied to a line (keyed by the line's cleaned text). */
 export type Override = { tier: ClassifyResult["tier"]; scope?: string; reason: string; confidence: number };
 /** `relatedOverlap`: minimum lexical overlap for a constraint to be attached to a grey line (default 0: rank, do not filter; paraphrases and translations share no words). `maxRelated`: constraints sent per line. */
-export interface PlanOptions { overrides?: Map<string, Override>; uncertainBelow?: number; relatedOverlap?: number; maxRelated?: number }
+export interface PlanOptions { overrides?: Map<string, Override>; uncertainBelow?: number; relatedOverlap?: number; maxRelated?: number; observe?: (ev: PlanObserve) => void }
 export type WritePlan =
   | { ok: true; text: string; stamped: LineVerdict[]; grey: GreyCase[] }
   | { ok: false; conflict: EpistemicConflictError };
@@ -59,7 +60,10 @@ export function planText(
     const ov = opts.overrides?.get(text);
     if (ov) r = { tier: ov.tier, ...(ov.scope ? { scope: ov.scope } : {}), reason: ov.reason, downgraded: false, confidence: ov.confidence, uncertain: false };
     const conflict = arbitrate({ tier: r.tier, content: text, scope: r.scope }, constraints);
-    if (conflict) return { ok: false, conflict };
+    if (conflict) {
+      opts.observe?.({ evaluated: 1, blocked: 1, uncertain: r.confidence < below ? 1 : 0 });
+      return { ok: false, conflict };
+    }
     out.push(stampLine(stripTag(l), meta(r)));
     stamped.push({ line: text, result: r });
     if (!ov && r.confidence < below) {
@@ -72,6 +76,11 @@ export function planText(
         .map((x) => x.c);
       if (related.length) grey.push({ line: text, result: r, related });
     }
+    opts.observe?.({
+      evaluated: 1,
+      blocked: 0,
+      uncertain: r.confidence < below && !ov ? 1 : 0,
+    });
   }
   return { ok: true, text: out.join("\n"), stamped, grey };
 }

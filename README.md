@@ -119,6 +119,20 @@ This is data minimisation, not zero-knowledge: the candidate line and the attach
 
 The default endpoint is the hosted arbitrator (`kalinov-cloud.onrender.com`; the server is not part of this repository). Override with `cloud.endpoint`. API keys are issued manually during the pre-release.
 
+### Routing stats
+
+Every gated write op is counted, and the counters persist across host restarts in `.kalinov/state.json` next to the session counter. `openclaw kalinov doctor` prints them, and one structured line (`kalinov: routing ...`, numbers only, no line texts) is logged per op. The headline number is `cloud_selected_lines / evaluated_lines`: the share of classified lines for which the cloud path was actually chosen.
+
+- `evaluated_lines` — new content lines that reached classification. Lines after an early block were never classified; unchanged lines are never re-evaluated.
+- `local_only_lines` — decided locally (confident, or grey-zone with no cloud path taken).
+- `cloud_selected_lines` — grey-zone lines asked of the judge (≤ 3 per write). `cloud_capped_lines` — grey-zone lines beyond that cap.
+- `blocked_lines` — rejected by a conflict; the remaining lines of that write were never evaluated.
+- `cloud_network_requests`, `cloud_cache_hits`, `cloud_fallbacks` — transport behind the routing choice. A cache hit does not touch the network but still counts as routed; a failure is a fallback, not an unrouted line: the local decision stands.
+
+Invariant by construction: `evaluated_lines = local_only_lines + cloud_selected_lines + cloud_capped_lines + blocked_lines`.
+
+Why this exists: on the eval sets below, ~95% of lines went to the judge — but that is author-labelled data, not live traffic. The counters are how the live share gets measured: run the gate on a real host doing real work, and `doctor` reports what actually happened. `apply_patch` bypass attempts never reach line classification and are not counted as write ops.
+
 ## Configuration
 
 Zero-config by default. Optional, in `plugins.entries.kalinov-most.config`:

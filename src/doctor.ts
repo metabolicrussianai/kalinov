@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { MarkdownAdapter } from "./adapters/markdown.ts";
 import { resolveAgentWorkspace } from "./workspace.ts";
+import { formatStats, loadRoutingStats } from "./stats.ts";
 
 export interface DoctorReport { ok: boolean; workspace: string; checks: Array<{ name: string; ok: boolean; detail: string }> }
 
@@ -28,9 +29,13 @@ export async function runDoctor(opts: { workspace?: string; config?: Record<stri
   checks.push({ name: "stamped records", ok: true, detail: Object.keys(tiers).length ? JSON.stringify(tiers) : "none yet" });
   checks.push({ name: "active constraints", ok: true, detail: String(constraints.length) });
 
-  let session = 0;
-  try { session = JSON.parse(await fs.readFile(path.join(workspace, ".kalinov", "state.json"), "utf8")).session; } catch { /* first run */ }
+  let state: unknown = null;
+  try { state = JSON.parse(await fs.readFile(path.join(workspace, ".kalinov", "state.json"), "utf8")); } catch { /* first run */ }
+  const session = (state as { session?: number } | null)?.session ?? 0;
   checks.push({ name: "session counter", ok: true, detail: String(session) });
+
+  const s = loadRoutingStats((state as { stats?: unknown } | null)?.stats);
+  checks.push({ name: "routing stats", ok: true, detail: formatStats(s) });
 
   const ttl = opts.pluginConfig?.hypothesisTtlSessions ?? 3;
   checks.push({ name: "hypothesis TTL", ok: Number.isInteger(ttl) && ttl >= 1, detail: `${ttl} sessions` });
