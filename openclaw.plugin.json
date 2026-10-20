@@ -1,0 +1,88 @@
+{
+  "id": "kalinov-most",
+  "name": "Kalinov",
+  "description": "Epistemic gate for agent memory: four tiers, conflict arbitration, physical GC of expired hypotheses. Works in front of the built-in Markdown memory.",
+  "version": "0.1.0-pre",
+  "categories": [
+    "security"
+  ],
+  "activation": {
+    "onCapabilities": [
+      "hook"
+    ]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "hypothesisTtlSessions": {
+        "type": "integer",
+        "minimum": 1,
+        "default": 3,
+        "description": "Sessions a HYPOTHESIS survives before GC removes it."
+      },
+      "strictMode": {
+        "type": "boolean",
+        "default": false,
+        "description": "Block memory lines the classifier cannot tier, instead of defaulting them to HYPOTHESIS."
+      },
+      "workspaceDir": {
+        "type": "string",
+        "description": "Base for relative memory paths. Defaults to the calling agent's workspace (agents.list[].workspace, agents.defaults.workspace, ~/.openclaw/workspace)."
+      },
+      "guardUserFile": {
+        "type": "boolean",
+        "default": false,
+        "description": "Also gate USER.md (where the stock template files user preferences as active directives): lines without a verified user source are blocked. Works best with hooks.allowConversationAccess."
+      },
+      "cloud": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Optional cloud arbitrator for grey-zone lines. Without apiKey (or KALINOV_API_KEY) Kalinov makes no network requests.",
+        "properties": {
+          "apiKey": {
+            "type": "string",
+            "description": "Kalinov Cloud API key. Prefer the KALINOV_API_KEY environment variable."
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "Arbitration endpoint."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 5000,
+            "default": 2500,
+            "description": "Round-trip budget. On timeout or any error the local decision stands."
+          },
+          "sendUserTurn": {
+            "type": "boolean",
+            "default": false,
+            "description": "Also send the user's prompt for this turn (needs hooks.allowConversationAccess)."
+          },
+          "uncertainBelow": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.7,
+            "description": "Local confidence below this marks a line as grey-zone."
+          },
+          "minRelatedOverlap": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0,
+            "description": "Minimum word overlap before a constraint is attached to a grey-zone line. 0 sends the closest constraints regardless (best recall); 0.25 sends only lexically related ones (less data leaves the machine, misses paraphrases)."
+          }
+        }
+      }
+    }
+  },
+  "cliCommands": [
+    {
+      "name": "kalinov",
+      "description": "Kalinov epistemic memory gate: diagnostics",
+      "hasSubcommands": true
+    }
+  ]
+}
