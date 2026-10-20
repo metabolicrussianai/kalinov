@@ -2,7 +2,7 @@
   "name": "@kalinov/most",
   "version": "0.1.0-pre",
   "description": "Kalinov — epistemic gate for agent memory. OpenClaw plugin.",
-  "license": "MIT",
+  "license": "BSL-1.1",
   "type": "module",
   "main": "./src/index.ts",
   "files": [
