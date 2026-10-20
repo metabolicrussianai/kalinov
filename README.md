@@ -117,7 +117,7 @@ Every classification carries a `confidence` (0..1): explicit quote .95, verified
 
 This is data minimisation, not zero-knowledge: the candidate line and the attached constraints do leave the machine.
 
-The default endpoint is the hosted arbitrator (`kalinov-cloud.onrender.com`; the server is not part of this repository). Override with `cloud.endpoint`. API keys are issued manually during the pre-release.
+The default endpoint is the hosted arbitrator (`kalinov-cloud.onrender.com`; the server is closed source and not part of this repository). Override with `cloud.endpoint` to point at your own judge. Kalinov Cloud is the paid tier: keys are issued on request during early access, there is no free quota and no self-serve signup yet.
 
 ### Routing stats
 
@@ -167,11 +167,11 @@ npm run typecheck # tsc, after npm install
 
 ## Open core
 
-Everything in this repository is MIT. A plugin that reads every write to your agent's memory and runs inside the Gateway process has no business being a black box.
+Everything in this repository is source-available under the Business Source License 1.1 (see `LICENSE`): free for internal use, development, research and production inside your own organisation; offering it as a hosted or managed service to third parties needs a commercial licence. On 2030-01-01 it converts to MIT. A plugin that reads every write to your agent's memory and runs inside the Gateway process has no business being a black box, and the local layer is not one.
 
 The paid tier (Kalinov Cloud) is the hosted semantic judge for grey-zone lines. Calls are metered on the server, per key: a counter in the plugin would be one file edit away from unlimited.
 
-- **Available now (pre-release):** hosted arbitration, server-side quota, manually issued keys. 100 judge calls a month free.
+- **Available now (early access, paid):** hosted arbitration with server-side metering. Keys are issued on request; there is no free quota.
 - **Planned, not built:** intercept history dashboard, directive sync across a team's agents, `openclaw kalinov login`, self-serve billing. Target pricing $29/mo per agent, $99/mo per team.
 
 ## Status
@@ -222,4 +222,4 @@ Kalinov narrows how memory goes wrong. It is not complete protection of agent me
 
 ## License
 
-MIT
+Business Source License 1.1 — see `LICENSE`. Change date 2030-01-01, change licence MIT.
